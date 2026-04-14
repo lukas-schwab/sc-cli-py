@@ -26,7 +26,7 @@ class ScalableListResponse(ScalableBaseModel, Generic[T]):
     items: List[T]
     count: int
 
-    def __iter__(self):
+    def __iter__(self):  # type: ignore[override]
         return iter(self.items)
 
     def __getitem__(self, i):
