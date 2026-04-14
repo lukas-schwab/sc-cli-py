@@ -34,7 +34,7 @@ The wrapper just uses the official [Scalable CLI](https://github.com/ScalableCap
 >   - Do **NOT** use this code unless you understand every line yourself. The code may contain bugs or unexpected behavior.
 >   - **YOU** are responsible for all of your actions. (Algorithmic) Trading is risky and I discourage everyone to use this API for anything beyond a hobby project.
 
-## Install (not available on PyPi yet)
+## Install
 
 ```bash
 pip install sc-cli-py
@@ -76,14 +76,15 @@ print(f"Securities:  {overview.securities:,.2f} EUR")
 ```
 
 ### Trading
+**Trading is not yet implemented as it needs more rigorous testing.**
 
 Trading is an intentional two-step flow to ensure precision and allow for review.
 
 ```python
 # Phase 1: Preview (No confirm_id)
 # Use isin, and amount (for buy) or shares (for sell)
-preview = broker.trade_buy(isin="ISIN_HERE", amount=100)
-print(f"Status: {preview.status}")
+# preview = broker.trade_buy(isin="ISIN_HERE", amount=100)
+# print(f"Status: {preview.status}")
 
 # Phase 2: Confirm (Using confirmation_id from preview)
 # if preview.confirmation_id:
