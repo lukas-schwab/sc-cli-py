@@ -23,6 +23,11 @@ dependencies = [
     "pydantic>=2.10.6",
 ]
 
+[project.urls]
+Homepage = "https://github.com/lukas-schwab/sc-cli-py"
+Repository = "https://github.com/lukas-schwab/sc-cli-py"
+Issues = "https://github.com/lukas-schwab/sc-cli-py/issues"
+
 [project.optional-dependencies]
 pandas = [
     "pandas>=2.0.3",
@@ -30,6 +35,8 @@ pandas = [
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
 ]
 
 [tool.setuptools.packages.find]
