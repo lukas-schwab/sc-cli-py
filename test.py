@@ -6,3 +6,6 @@ logging.basicConfig(level=logging.INFO)
 api = ScalableAPI()
 
 broker = api.login(interactive=False)
+
+df = broker.get_holdings().to_df()
+print(df)

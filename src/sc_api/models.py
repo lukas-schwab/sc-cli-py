@@ -2,8 +2,6 @@ from datetime import datetime
 from typing import List, Optional, Any, Dict, Generic, TypeVar
 from pydantic import BaseModel, Field, field_validator, ConfigDict, PrivateAttr, model_validator
 
-T = TypeVar("T")
-
 class ScalableBaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     _raw_data: Any = PrivateAttr(default=None)
@@ -22,6 +20,8 @@ class ScalableBaseModel(BaseModel):
             instance._raw_data = value
         return instance
 
+T = TypeVar("T", bound=ScalableBaseModel)
+
 class ScalableListResponse(ScalableBaseModel, Generic[T]):
     items: List[T]
     count: int
@@ -34,6 +34,23 @@ class ScalableListResponse(ScalableBaseModel, Generic[T]):
 
     def __len__(self) -> int:
         return len(self.items)
+
+    def to_df(self):
+        """
+        Converts the items in this response to a pandas DataFrame.
+        Requires pandas to be installed.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError(
+                "The 'pandas' library is required for to_df(). "
+                "Please install it with 'pip install pandas'."
+            )
+        
+        # Convert models to dictionaries for the DataFrame
+        data = [item.model_dump() for item in self.items]
+        return pd.DataFrame(data)
 
 class Holding(ScalableBaseModel):
     isin: str
