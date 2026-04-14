@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from typing import List, Optional, Dict, Any
 from .cli_manager import CLIManager
 from .runner import ScalableRunner
@@ -7,6 +8,7 @@ from .models import (
     Holding, HoldingsResponse, Transaction, TransactionsResponse, 
     UserInfo, TradeResponse, Overview, Security, SearchResponse
 )
+from .logger import setup_logger, get_default_log_path
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +43,23 @@ class Broker:
         Phase 2 (submit): Call with confirm_id.
         """
         raise NotImplementedError("Not implemented yet")
+        phase = "SUBMIT" if confirm_id else "PREVIEW"
+        logger.info(f"BUY ORDER [{phase}]: ISIN={isin}, Amount={amount}, Type={order_type}, ID={confirm_id or 'N/A'}")
+        
         args = ["broker", "trade", "buy", "--isin", isin, "--amount", str(amount), "--order-type", order_type]
         if confirm_id:
             args.extend(["--confirm", confirm_id])
             
         res = self._api._call(args)
         data = res.get("data", {}).get("result", res)
-        return TradeResponse.model_validate(data)
+        
+        trade_res = TradeResponse.model_validate(data)
+        if confirm_id:
+             logger.info(f"BUY ORDER SUCCESS: {trade_res}")
+        else:
+             logger.info(f"BUY PREVIEW RECEIVED: Confirm ID={trade_res.confirmation_id}")
+             
+        return trade_res
 
     def trade_sell(self, isin: str, amount: float, order_type: str = "market", confirm_id: Optional[str] = None) -> TradeResponse:
         """
@@ -56,13 +68,23 @@ class Broker:
         Phase 2 (submit): Call with confirm_id.
         """
         raise NotImplementedError("Not implemented yet")
+        phase = "SUBMIT" if confirm_id else "PREVIEW"
+        logger.info(f"SELL ORDER [{phase}]: ISIN={isin}, Amount={amount}, Type={order_type}, ID={confirm_id or 'N/A'}")
+        
         args = ["broker", "trade", "sell", "--isin", isin, "--amount", str(amount), "--order-type", order_type]
         if confirm_id:
             args.extend(["--confirm", confirm_id])
             
         res = self._api._call(args)
         data = res.get("data", {}).get("result", res)
-        return TradeResponse.model_validate(data)
+        
+        trade_res = TradeResponse.model_validate(data)
+        if confirm_id:
+             logger.info(f"SELL ORDER SUCCESS: {trade_res}")
+        else:
+             logger.info(f"SELL PREVIEW RECEIVED: Confirm ID={trade_res.confirmation_id}")
+             
+        return trade_res
 
     def get_transactions(self) -> TransactionsResponse:
         """Returns the current portfolio transactions."""
@@ -108,10 +130,18 @@ class ScalableAPI:
     Handles authentication and session management.
     """
     
-    def __init__(self, manager: Optional[CLIManager] = None):
+    def __init__(self, manager: Optional[CLIManager] = None, log_file: Optional[str] = None):
         self.manager = manager or CLIManager()
         self._runner: Optional[ScalableRunner] = None
         self._broker: Optional[Broker] = None
+        
+        # Configure logging for the entire sc_api package
+        if log_file:
+            setup_logger("sc_api", log_file=log_file)
+        elif os.environ.get("SC_API_LOG_FILE"):
+            setup_logger("sc_api", log_file=os.environ.get("SC_API_LOG_FILE"))
+        else:
+            setup_logger("sc_api", log_file=str(get_default_log_path()))
         
     @property
     def runner(self) -> ScalableRunner:
@@ -182,6 +212,7 @@ class ScalableAPI:
         result = res.get("data", {}).get("result", {})
         details = result.get("personOverview", {}).get("personalDetails", {})
         info = UserInfo.model_validate(details)
+        logger.info(f"Session established for user: {info.first_name} {info.last_name}")
         self._broker = Broker(self, info)
         return self._broker
 
