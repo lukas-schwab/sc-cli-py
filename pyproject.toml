@@ -9,7 +9,7 @@ description = "A Python API wrapper for the Scalable CLI tool"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
-    { name = "Lukas", email = "lukas@example.com" },
+    { name = "Lukas", email = "lukas-contact@proton.me" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
