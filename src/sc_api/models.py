@@ -1,10 +1,41 @@
 from datetime import datetime
-from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import List, Optional, Any, Dict, Generic, TypeVar
+from pydantic import BaseModel, Field, field_validator, ConfigDict, PrivateAttr, model_validator
 
-class Holding(BaseModel):
+T = TypeVar("T")
+
+class ScalableBaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    
+    _raw_data: Any = PrivateAttr(default=None)
+
+    @property
+    def raw(self) -> Any:
+        """Returns the raw JSON data used to create this model instance."""
+        return self._raw_data
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _capture_raw(cls, value: Any, handler: Any) -> Any:
+        """Captures the raw input data before validation."""
+        instance = handler(value)
+        if isinstance(value, dict):
+            instance._raw_data = value
+        return instance
+
+class ScalableListResponse(ScalableBaseModel, Generic[T]):
+    items: List[T]
+    count: int
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __getitem__(self, i):
+        return self.items[i]
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+class Holding(ScalableBaseModel):
     isin: str
     name: str
     quantity: float
@@ -25,20 +56,16 @@ class Holding(BaseModel):
     
     __str__ = __repr__
 
-class HoldingsResponse(BaseModel):
+class HoldingsResponse(ScalableListResponse[Holding]):
     account_id: str
     portfolio_id: str
-    items: List[Holding]
-    count: int
 
     def __repr__(self) -> str:
         return f"HoldingsResponse(count={self.count}, portfolio='{self.portfolio_id}')"
     
     __str__ = __repr__
 
-class Transaction(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
+class Transaction(ScalableBaseModel):
     id: str
     type: str  # SECURITY_TRANSACTION | CASH_TRANSACTION
     status: str
@@ -80,11 +107,10 @@ class Transaction(BaseModel):
 
     __str__ = __repr__
 
-class TransactionsResponse(BaseModel):
-    items: List[Transaction]
-    count: int
+class TransactionsResponse(ScalableListResponse[Transaction]):
+    pass
 
-class UserInfo(BaseModel):
+class UserInfo(ScalableBaseModel):
     first_name: str = Field(alias="firstName")
     last_name: str = Field(alias="lastName")
 
@@ -93,9 +119,7 @@ class UserInfo(BaseModel):
 
     __str__ = __repr__
 
-class TradeResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
+class TradeResponse(ScalableBaseModel):
     confirmation_id: Optional[str] = Field(None, alias="confirmationId")
     order_id: Optional[str] = Field(None, alias="orderId")
     status: Optional[str] = None
@@ -105,7 +129,7 @@ class TradeResponse(BaseModel):
 
     __str__ = __repr__
 
-class PerformanceMetric(BaseModel):
+class PerformanceMetric(ScalableBaseModel):
     timeframe: str
     performance: float
     simple_absolute_return: float = Field(alias="simpleAbsoluteReturn")
@@ -116,7 +140,7 @@ class PerformanceMetric(BaseModel):
 
     __str__ = __repr__
 
-class Overview(BaseModel):
+class Overview(ScalableBaseModel):
     account_id: str
     portfolio_id: str
     total: float
@@ -133,7 +157,7 @@ class Overview(BaseModel):
         val = result.get("valuation", {})
         ts = result.get("timestamps", {})
         
-        return cls(
+        instance = cls(
             account_id=result.get("account_id", ""),
             portfolio_id=result.get("portfolio_id", ""),
             total=val.get("total", 0),
@@ -143,6 +167,9 @@ class Overview(BaseModel):
             valuation_timestamp_utc=ts.get("valuation_timestamp_utc") or datetime.min,
             performance=result.get("performance", []),
         )
+        # Capture the actual raw API response
+        instance._raw_data = data
+        return instance
 
     def __repr__(self) -> str:
         ts = self.valuation_timestamp_utc.strftime("%Y-%m-%d %H:%M")
@@ -150,7 +177,7 @@ class Overview(BaseModel):
 
     __str__ = __repr__
 
-class Security(BaseModel):
+class Security(ScalableBaseModel):
     isin: str
     name: str
     quote_currency: str
@@ -165,8 +192,6 @@ class Security(BaseModel):
 
     __str__ = __repr__
 
-class SearchResponse(BaseModel):
-    items: List[Security]
-    count: int
+class SearchResponse(ScalableListResponse[Security]):
     portfolio_id: str
     query: str

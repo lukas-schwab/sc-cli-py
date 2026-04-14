@@ -28,11 +28,11 @@ class Broker:
         self._api = api
         self.user = User(info)
 
-    def get_holdings(self) -> List[Holding]:
+    def get_holdings(self) -> HoldingsResponse:
         """Returns the current portfolio holdings."""
         res = self._api._call(["broker", "holdings"])
         data = res.get("data", {}).get("result", {})
-        return HoldingsResponse.model_validate(data).items
+        return HoldingsResponse.model_validate(data)
 
     def trade_buy(self, isin: str, amount: float, order_type: str = "market", confirm_id: Optional[str] = None) -> TradeResponse:
         """
@@ -40,6 +40,7 @@ class Broker:
         Phase 1 (preview): Call without confirm_id.
         Phase 2 (submit): Call with confirm_id.
         """
+        raise NotImplementedError("Not implemented yet")
         args = ["broker", "trade", "buy", "--isin", isin, "--amount", str(amount), "--order-type", order_type]
         if confirm_id:
             args.extend(["--confirm", confirm_id])
@@ -54,6 +55,7 @@ class Broker:
         Phase 1 (preview): Call without confirm_id.
         Phase 2 (submit): Call with confirm_id.
         """
+        raise NotImplementedError("Not implemented yet")
         args = ["broker", "trade", "sell", "--isin", isin, "--amount", str(amount), "--order-type", order_type]
         if confirm_id:
             args.extend(["--confirm", confirm_id])
@@ -62,22 +64,22 @@ class Broker:
         data = res.get("data", {}).get("result", res)
         return TradeResponse.model_validate(data)
 
-    def get_transactions(self) -> List[Transaction]:
+    def get_transactions(self) -> TransactionsResponse:
         """Returns the current portfolio transactions."""
         res = self._api._call(["broker", "transactions"])
         data = res.get("data", {}).get("result", {})
-        return TransactionsResponse.model_validate(data).items
+        return TransactionsResponse.model_validate(data)
 
     def get_overview(self) -> Overview:
         """Returns the current portfolio overview."""
         res = self._api._call(["broker", "overview"])
         return Overview.from_api_dict(res)
 
-    def search(self, query: str) -> List[Security]:
+    def search(self, query: str) -> SearchResponse:
         """Returns a list of securities matching the query (authenticated)."""
         res = self._api._call(["broker", "search", query])
         data = res.get("data", {}).get("result", {})
-        return SearchResponse.model_validate(data).items
+        return SearchResponse.model_validate(data)
 
 class User:
     """
